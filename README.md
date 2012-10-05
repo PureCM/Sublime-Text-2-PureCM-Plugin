@@ -1,12 +1,16 @@
 # Sublime Text 2 PureCM Plugin
 
-Supports checkout, add, delete, revert, diff, history, update, submit and check consistency.
+Supports PureCM checkout, add, delete, revert, diff, history, update, submit and check consistency within Sublime Text 2.
 
 ## Install
 
 The preferred method is to use the [Sublime Package Manager](http://wbond.net/sublime_packages/package_control). Alternatively, the files can be obtained on github:
 
     $ https://github.com/PureCM/Sublime-Text-2-PureCM-Plugin
+
+The plugin will only work if you have the PureCM command line client installed. This can be installed from:
+
+    $ http://www.purecm.com/downloads.php
 
 # License
 
