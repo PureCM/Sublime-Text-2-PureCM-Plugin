@@ -38,13 +38,12 @@ def PurecmCommandOnFile(in_command, in_folder, in_filename):
 def WarnUser(message):
 	Purecm_settings = sublime.load_settings('Purecm.sublime-settings')
 	if(Purecm_settings.get('purecm_warnings_enabled')):
-		if(Purecm_settings.get('Purecm_log_warnings_to_status')):
+		if(Purecm_settings.get('purecm_log_warnings_to_status')):
 			sublime.status_message("Purecm [warning]: " + message)
-		else:
-			print("Purecm [warning]: " + message);
+		print("Purecm [warning]: " + message);
 
 def LogResults(success, message):
-	if(success >= 0):
+	if(success > 0):
 		print "Purecm: " + message
 	else:
 		WarnUser(message);
@@ -76,19 +75,24 @@ class BackgroundCheckout(threading.Thread):
 		threading.Thread.__init__(self)
 		
 	def run(self):
-		print "BackgroundCheckout.run (Thread) fname=" + self.fname
+		global g_checkoutDict
 		success, message = Checkout(self.fname)
+		if ( not success ):
+			g_checkoutDict[self.fname] = 0
 		LogResults(success, message);
 		self.result = True
 		return
 
+g_checkoutDict = {}
+
 class PurecmAutoCheckout(sublime_plugin.EventListener):  
 	def on_modified(self, view):
+		global g_checkoutDict
+
 		if(not view.file_name()):
 			return
 
 		if(IsFileWritable(view.file_name())):
-			print "PurecmAutoCheckout:on_modified not checking out because already writeable: " + view.file_name()
 			return
 
 		Purecm_settings = sublime.load_settings('Purecm.sublime-settings')
@@ -98,10 +102,16 @@ class PurecmAutoCheckout(sublime_plugin.EventListener):
 			return
 			  
 		if(view.is_dirty()):
-			thread = BackgroundCheckout(view.file_name())
-			thread.start()
+			if (g_checkoutDict.get(view.file_name(),0) == 0):
+				g_checkoutDict[view.file_name()] = 1
+				thread = BackgroundCheckout(view.file_name())
+				thread.start()
+			return
+		else:
+			return
 
 	def on_pre_save(self, view):
+		global g_checkoutDict
 		Purecm_settings = sublime.load_settings('Purecm.sublime-settings')
 
 		# check if this part of the plugin is enabled
@@ -109,8 +119,13 @@ class PurecmAutoCheckout(sublime_plugin.EventListener):
 			return
 			  
 		if(view.is_dirty()):
-			success, message = Checkout(view.file_name())
-			LogResults(success, message);
+			if (g_checkoutDict.get(view.file_name(),0) == 0):
+				g_checkoutDict[view.file_name()] = 1;
+				success, message = Checkout(view.file_name())
+				LogResults(success, message)
+			return
+		else:
+			return
 
 class PurecmCheckoutCommand(sublime_plugin.TextCommand):
 	def run(self, edit):
@@ -126,16 +141,15 @@ def Add(in_folder, in_filename):
 
 class PurecmAutoAdd(sublime_plugin.EventListener):
 	def on_pre_save(self, view):
+		return
+
+	def on_post_save(self, view):
 		Purecm_settings = sublime.load_settings('Purecm.sublime-settings')
 
 		# check if this part of the plugin is enabled
 		if(not Purecm_settings.get('Purecm_auto_add')):
-			WarnUser("Auto Add disabled")
-			return
+			return	
 
-		folder_name, filename = os.path.split(view.file_name())
-
-	def on_post_save(self, view):
 		folder_name, filename = os.path.split(view.file_name())
 		success, message = Add(folder_name, filename)
 		LogResults(success, message)
