@@ -26,7 +26,7 @@ def PurecmCommandOnFile(in_command, in_folder, in_filename):
 	if (in_filename.__len__() > 0):
 		commandParam += (' "' + in_filename + '"')
 	command = ConstructCommand(commandParam)
-	print "PureCM: " + command
+	print("PureCM: " + command)
 	p = subprocess.Popen(command, stdout=subprocess.PIPE, stderr=subprocess.PIPE, cwd=in_folder, shell=True)
 	result, err = p.communicate()
 
@@ -44,7 +44,7 @@ def WarnUser(message):
 
 def LogResults(success, message):
 	if(success > 0):
-		print "Purecm: " + message
+		print("Purecm: " + message)
 	else:
 		WarnUser(message);
 
@@ -129,7 +129,7 @@ class PurecmAutoCheckout(sublime_plugin.EventListener):
 
 class PurecmCheckoutCommand(sublime_plugin.TextCommand):
 	def run(self, edit):
-		print "PurecmCheckoutCommand.run"
+		print("PurecmCheckoutCommand.run")
 		if(self.view.file_name()):
 			success, message = Checkout(self.view.file_name())
 			LogResults(success, message)
