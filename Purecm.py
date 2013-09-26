@@ -50,77 +50,34 @@ def LogResults(success, message):
 
 def IsFileWritable(in_filename):
 	if(not in_filename):
-		return 0
+		return False
 
 	# if it doesn't exist, it's "writable"
 	if(not os.path.isfile(in_filename)):
-		return 1
+		return True
 
 	filestats = os.stat(in_filename)[0];
 	if(filestats & stat.S_IWRITE):
-		return 1
-	return 0
+		return True
+	return False
 
 def Checkout(in_filename):
-	if(IsFileWritable(in_filename)):
-		return -1, "File is already writable."
-
 	folder_name, filename = os.path.split(in_filename)
 
 	return PurecmCommandOnFile("checkout", folder_name, in_filename);
 
-class BackgroundCheckout(threading.Thread):
-	def __init__(self,fname):
-		self.fname = fname
-		threading.Thread.__init__(self)
-		
-	def run(self):
-		global g_checkoutDict
-		success, message = Checkout(self.fname)
-		if ( not success ):
-			g_checkoutDict[self.fname] = 0
-		LogResults(success, message);
-		self.result = True
-		return
-
-g_checkoutDict = {}
-
 class PurecmAutoCheckout(sublime_plugin.EventListener):  
-	def on_modified(self, view):
-		global g_checkoutDict
-
-		if(not view.file_name()):
-			return
-
-		if(IsFileWritable(view.file_name())):
-			return
-
-		Purecm_settings = sublime.load_settings('Purecm.sublime-settings')
-
-		# check if this part of the plugin is enabled
-		if(not Purecm_settings.get('purecm_auto_checkout') or not Purecm_settings.get('purecm_auto_checkout_on_modified')):
-			return
-			  
-		if(view.is_dirty()):
-			if (g_checkoutDict.get(view.file_name(),0) == 0):
-				g_checkoutDict[view.file_name()] = 1
-				thread = BackgroundCheckout(view.file_name())
-				thread.start()
-			return
-		else:
-			return
-
 	def on_pre_save(self, view):
-		global g_checkoutDict
 		Purecm_settings = sublime.load_settings('Purecm.sublime-settings')
 
 		# check if this part of the plugin is enabled
-		if(not Purecm_settings.get('purecm_auto_checkout') or not Purecm_settings.get('purecm_auto_checkout_on_save')):
+		if(not Purecm_settings.get('purecm_auto_checkout')):
 			return
-			  
+
 		if(view.is_dirty()):
-			if (g_checkoutDict.get(view.file_name(),0) == 0):
-				g_checkoutDict[view.file_name()] = 1;
+			if (not IsFileWritable(view.file_name())):
+				if (os.path.isfile(view.file_name())):
+					os.chmod(view.file_name(), stat.S_IWRITE)
 				success, message = Checkout(view.file_name())
 				LogResults(success, message)
 			return
@@ -129,7 +86,6 @@ class PurecmAutoCheckout(sublime_plugin.EventListener):
 
 class PurecmCheckoutCommand(sublime_plugin.TextCommand):
 	def run(self, edit):
-		print("PurecmCheckoutCommand.run")
 		if(self.view.file_name()):
 			success, message = Checkout(self.view.file_name())
 			LogResults(success, message)
